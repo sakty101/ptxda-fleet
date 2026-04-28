@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1923">
+<title>XDA Fleet Monitor</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0f1923;
+    --surface: #1a2635;
+    --surface2: #243347;
+    --border: #2e4057;
+    --text: #e8edf2;
+    --text-muted: #7a9bb5;
+    --ok: #22c55e;
+    --ok-bg: #052e16;
+    --standby: #f59e0b;
+    --standby-bg: #2d1f00;
+    --repair: #ef4444;
+    --repair-bg: #2d0a0a;
+    --heavy: #a855f7;
+    --heavy-bg: #1e0a2d;
+    --accent: #3b82f6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* CONFIG SCREEN */
+  #config-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: linear-gradient(160deg, #0f1923 0%, #1a2635 100%);
+  }
+
+  .config-logo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .config-logo span { color: var(--accent); }
+  .config-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 40px; letter-spacing: 2px; text-transform: uppercase; }
+
+  .config-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .config-box label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .config-box input, .config-box select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-size: 15px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .config-box input:focus, .config-box select:focus { border-color: var(--accent); }
+  .config-box select option { background: var(--surface); }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 16px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* MAIN APP */
+  #app { display: none; min-height: 100vh; padding-bottom: 80px; }
+
+  /* HEADER */
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header-left .app-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .header-left .app-title span { color: var(--accent); }
+  .header-user { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+  .btn-logout {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+  }
+
+  /* DASHBOARD SUMMARY */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .summary-card.ok::before { background: var(--ok); }
+  .summary-card.standby::before { background: var(--standby); }
+  .summary-card.repair::before { background: var(--repair); }
+  .summary-card.heavy::before { background: var(--heavy); }
+
+  .summary-num {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .summary-card.ok .summary-num { color: var(--ok); }
+  .summary-card.standby .summary-num { color: var(--standby); }
+  .summary-card.repair .summary-num { color: var(--repair); }
+  .summary-card.heavy .summary-num { color: var(--heavy); }
+
+  .summary-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .summary-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; opacity: 0.6; }
+
+  /* PROGRESS BAR */
+  .progress-wrap { padding: 0 16px 16px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .progress-bar { background: var(--surface2); border-radius: 99px; height: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--ok); border-radius: 99px; transition: width 0.5s ease; }
+
+  /* SECTION HEADER */
+  .section-header {
+    padding: 8px 16px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .unit-count { font-size: 12px; color: var(--text-muted); }
+
+  /* FILTER TABS */
+  .filter-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .filter-tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 7px 14px;
+    border-radius: 99px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* UNIT LIST */
+  .unit-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+
+  .unit-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+
+  .unit-card:active { background: var(--surface2); }
+
+  .unit-badge {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    min-width: 56px;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  .unit-info { flex: 1; }
+  .unit-polisi { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+  .unit-status {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 5px 10px;
+    border-radius: 99px;
+    text-transform: uppercase;
+  }
+
+  .status-ok { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); }
+  .status-standby { background: var(--standby-bg); color: var(--standby); border: 1px solid var(--standby); }
+  .status-repair { background: var(--repair-bg); color: var(--repair); border: 1px solid var(--repair); }
+  .status-heavy { background: var(--heavy-bg); color: var(--heavy); border: 1px solid var(--heavy); }
+  .status-pending { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+
+  .unit-note { font-size: 11px; color: var(--text-muted); margin-top: 3px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+
+  .unit-updated { font-size: 10px; color: var(--text-muted); opacity: 0.5; margin-top: 2px; }
+
+  /* BOTTOM SHEET / MODAL */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+
+  .overlay.active { display: flex; align-items: flex-end; }
+
+  .bottom-sheet {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    border-top: 1px solid var(--border);
+    width: 100%;
+    padding: 0 0 40px;
+    animation: slideUp 0.3s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .sheet-handle {
+    width: 40px; height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+    margin: 14px auto 0;
+  }
+
+  .sheet-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sheet-unit-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+  }
+
+  .sheet-polisi { color: var(--text-muted); font-size: 14px; margin-top: 2px; }
+
+  .sheet-body { padding: 20px; }
+
+  .sheet-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .status-btn {
+    padding: 16px 12px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    text-align: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .status-btn.ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+  .status-btn.standby { background: var(--standby-bg); color: var(--standby); border-color: var(--standby); }
+  .status-btn.repair { background: var(--repair-bg); color: var(--repair); border-color: var(--repair); }
+  .status-btn.heavy { background: var(--heavy-bg); color: var(--heavy); border-color: var(--heavy); }
+
+  .status-btn.selected { transform: scale(1.03); box-shadow: 0 0 0 2px white; }
+  .status-btn:active { transform: scale(0.97); }
+
+  .status-btn .btn-icon { font-size: 22px; margin-bottom: 4px; }
+
+  .note-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    padding: 14px 16px;
+    outline: none;
+    resize: none;
+    height: 80px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .note-input:focus { border-color: var(--accent); }
+
+  .btn-save {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 18px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-save:active:not(:disabled) { opacity: 0.85; transform: scale(0.98); }
+
+  /* SYNC INDICATOR */
+  .sync-bar {
+    background: var(--surface2);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    gap: 8px;
+  }
+
+  .sync-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--standby);
+    flex-shrink: 0;
+  }
+
+  .sync-dot.synced { background: var(--ok); }
+  .sync-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .btn-sync {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-family: 'Barlow', sans-serif;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    padding: 12px 20px;
+    border-radius: 99px;
+    z-index: 999;
+    opacity: 0;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+  }
+
+  .nav-btn {
+    flex: 1;
+    padding: 12px 8px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Barlow', sans-serif;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s;
+  }
+
+  .nav-btn.active { color: var(--accent); }
+  .nav-icon { font-size: 20px; }
+
+  /* HISTORY VIEW */
+  #history-view { display: none; padding: 16px; }
+
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .history-unit { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; }
+  .history-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .history-time { font-size: 11px; color: var(--text-muted); text-align: right; }
+
+  /* SETTINGS VIEW */
+  #settings-view { display: none; padding: 16px; }
+
+  .settings-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+
+  .settings-item label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+  .settings-item input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'Barlow', sans-serif;
+    padding: 10px 12px;
+    outline: none;
+  }
+
+  .settings-info { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+  .btn-save-settings {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 14px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* LOADING */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,25,35,0.9);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .loading-overlay.active { display: flex; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--text-muted); }
+
+  .no-results { text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- CONFIG / LOGIN SCREEN -->
+<div id="config-screen">
+  <div class="config-logo">XDA<span>Fleet</span></div>
+  <div class="config-sub">Unit Status Monitor</div>
+  <div class="config-box">
+    <label>Nama Mekanik</label>
+    <input type="text" id="input-name" placeholder="Contoh: Budi Santoso" autocomplete="name">
+    <label>Role</label>
+    <select id="input-role">
+      <option value="Mekanik">Mekanik</option>
+      <option value="PJO">PJO</option>
+      <option value="Admin">Admin</option>
+    </select>
+    <button class="btn-primary" onclick="startApp()">MASUK →</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Menyimpan data...</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="app-header">
+    <div class="header-left">
+      <div class="app-title">XDA<span>Fleet</span></div>
+      <div class="header-user" id="header-user">—</div>
+    </div>
+    <button class="btn-logout" onclick="logout()">Ganti User</button>
+  </div>
+
+  <!-- DASHBOARD VIEW -->
+  <div id="dashboard-view">
+    <div class="sync-bar">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-status">Belum tersinkron</span>
+      </div>
+      <button class="btn-sync" onclick="syncToSheets()">↑ Sync ke Sheets</button>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card ok">
+        <div class="summary-num" id="count-ok">0</div>
+        <div class="summary-label">✅ Operasional</div>
+        <div class="summary-sub">Siap jalan</div>
+      </div>
+      <div class="summary-card standby">
+        <div class="summary-num" id="count-standby">0</div>
+        <div class="summary-label">⏸ Standby</div>
+        <div class="summary-sub">Tunggu giliran</div>
+      </div>
+      <div class="summary-card repair">
+        <div class="summary-num" id="count-repair">0</div>
+        <div class="summary-label">🔧 Perbaikan</div>
+        <div class="summary-sub">Sedang servis</div>
+      </div>
+      <div class="summary-card heavy">
+        <div class="summary-num" id="count-heavy">0</div>
+        <div class="summary-label">🚨 Rusak Berat</div>
+        <div class="summary-sub">Butuh perhatian</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>Sudah dicek</span>
+        <span id="progress-text">0 / 49 unit</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="section-header">
+      <span class="section-title">Daftar Unit</span>
+      <span class="unit-count" id="unit-count-label">49 unit</span>
+    </div>
+
+    <div class="filter-tabs">
+      <div class="tab active" onclick="filterUnits('all', this)">Semua</div>
+      <div class="tab" onclick="filterUnits('pending', this)">Belum Dicek</div>
+      <div class="tab" onclick="filterUnits('ok', this)">Operasional</div>
+      <div class="tab" onclick="filterUnits('standby', this)">Standby</div>
+      <div class="tab" onclick="filterUnits('repair', this)">Perbaikan</div>
+      <div class="tab" onclick="filterUnits('heavy', this)">Rusak Berat</div>
+    </div>
+
+    <div class="unit-list" id="unit-list"></div>
+  </div>
+
+  <!-- HISTORY VIEW -->
+  <div id="history-view">
+    <div class="section-header" style="padding-top:16px;">
+      <span class="section-title">Riwayat Input Hari Ini</span>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- SETTINGS VIEW -->
+  <div id="settings-view">
+    <div class="section-header" style="padding-top:16px;">
+      <span class="section-title">Pengaturan Sync</span>
+    </div>
+    <div class="settings-item">
+      <label>Google Apps Script URL</label>
+      <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/...">
+      <div class="settings-info">Masukkan URL dari Google Apps Script yang sudah di-deploy. Lihat panduan setup untuk mendapatkan URL ini.</div>
+    </div>
+    <button class="btn-save-settings" onclick="saveSettings()">Simpan Pengaturan</button>
+
+    <div class="settings-item" style="margin-top:16px;">
+      <label>Reset Data Hari Ini</label>
+      <div class="settings-info">Hapus semua status yang sudah diinput hari ini (data lokal). Data di Google Sheets tidak terpengaruh.</div>
+      <button class="btn-save-settings" style="background:var(--repair); margin-top:10px;" onclick="resetData()">Reset Data Lokal</button>
+    </div>
+
+    <div class="settings-item">
+      <label>Versi Aplikasi</label>
+      <div class="settings-info">XDA Fleet Monitor v1.0<br>PT. XDA — Admin Support HO Jakarta</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="nav-dashboard" onclick="showView('dashboard')">
+      <span class="nav-icon">📊</span>Dashboard
+    </button>
+    <button class="nav-btn" id="nav-history" onclick="showView('history')">
+      <span class="nav-icon">📋</span>Riwayat
+    </button>
+    <button class="nav-btn" id="nav-settings" onclick="showView('settings')">
+      <span class="nav-icon">⚙️</span>Pengaturan
+    </button>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET: EDIT STATUS -->
+<div class="overlay" id="overlay" onclick="closeSheet(event)">
+  <div class="bottom-sheet" id="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-unit-name" id="sheet-unit-name">DT 001</div>
+      <div class="sheet-polisi" id="sheet-polisi">B 0000 XXX</div>
+    </div>
+    <div class="sheet-body">
+      <span class="sheet-label">Pilih Status Unit</span>
+      <div class="status-grid">
+        <button class="status-btn ok" onclick="selectStatus('ok', this)">
+          <div class="btn-icon">✅</div>OPERASIONAL
+        </button>
+        <button class="status-btn standby" onclick="selectStatus('standby', this)">
+          <div class="btn-icon">⏸️</div>STANDBY
+        </button>
+        <button class="status-btn repair" onclick="selectStatus('repair', this)">
+          <div class="btn-icon">🔧</div>PERBAIKAN
+        </button>
+        <button class="status-btn heavy" onclick="selectStatus('heavy', this)">
+          <div class="btn-icon">🚨</div>RUSAK BERAT
+        </button>
+      </div>
+      <span class="sheet-label">Catatan (Opsional)</span>
+      <textarea class="note-input" id="sheet-note" placeholder="Contoh: Ban depan kiri aus, ganti oli..."></textarea>
+      <button class="btn-save" id="btn-save-unit" onclick="saveUnitStatus()" disabled>
+        💾 SIMPAN STATUS
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================
+// DATA: 49 UNIT PT. XDA
+// ============================
+const UNITS = [
+  {id:'DT 001', polisi:'B 9440 PYY', rangka:'MJEFM8JN2RJX26877', mesin:'J08EWDJ41377'},
+  {id:'DT 002', polisi:'B 9661 PYY', rangka:'MJEFM8JN2RJX26878', mesin:'J08EWDJ41378'},
+  {id:'DT 003', polisi:'B 9662 PYY', rangka:'MJEFM8JN2RJX27035', mesin:'J08EWDJ41588'},
+  {id:'DT 004', polisi:'B 9752 PYY', rangka:'MJEFM8JN2RJX27036', mesin:'J08EWDJ41589'},
+  {id:'DT 005', polisi:'B 9774 PYY', rangka:'MJEFM8JN2RJX27037', mesin:'J08EWDJ41590'},
+  {id:'DT 006', polisi:'B 9775 PYY', rangka:'MJEFM8JN2RJX27038', mesin:'J08EWDJ41581'},
+  {id:'DT 007', polisi:'B 9804 PYY', rangka:'MJEFM8JN2RJX27039', mesin:'J08EWDJ41592'},
+  {id:'DT 008', polisi:'B 9438 PEV', rangka:'MJEFM8JN2RJX27138', mesin:'J08EWDJ41775'},
+  {id:'DT 009', polisi:'B 9439 PEV', rangka:'MJEFM8JN2RJX27139', mesin:'J08EWDJ41776'},
+  {id:'DT 010', polisi:'B 9477 PEV', rangka:'MJEFM8JN2RJX27140', mesin:'J08EWDJ41777'},
+  {id:'DT 011', polisi:'B 9788 XTZ', rangka:'MJEFM8JN2RJX27144', mesin:'J08EWDJ41785'},
+  {id:'DT 012', polisi:'B 9785 XTZ', rangka:'MJEFM8JN2RJX27145', mesin:'J08EWDJ41786'},
+  {id:'DT 013', polisi:'B 9786 XTZ', rangka:'MJEFM8JN2RJX27146', mesin:'J08EWDJ41787'},
+  {id:'DT 014', polisi:'B 9130 XCY', rangka:'MJEFM8JN2RJX27147', mesin:'J08EWDJ41788'},
+  {id:'DT 015', polisi:'B 9789 XTZ', rangka:'MJEFM8JN2RJX27148', mesin:'J08EWDJ41789'},
+  {id:'DT 016', polisi:'B 9783 XTZ', rangka:'MJEFM8JN2RJX27150', mesin:'J08EWDJ41794'},
+  {id:'DT 017', polisi:'B 9791 XTZ', rangka:'MJEFM8JN2RJX27151', mesin:'J08EWDJ41795'},
+  {id:'DT 018', polisi:'B 9784 XTZ', rangka:'MJEFM8JN2RJX27152', mesin:'J08EWDJ41796'},
+  {id:'DT 019', polisi:'B 9790 XTZ', rangka:'MJEFM8JN2RJX27153', mesin:'J08EWDJ41797'},
+  {id:'DT 020', polisi:'B 9793 XTZ', rangka:'MJEFM8JN2RJX27154', mesin:'J08EWDJ41798'},
+  {id:'DT 021', polisi:'B 9131 XCY', rangka:'MJEFM8JN2RJX27155', mesin:'J08EWDJ41799'},
+  {id:'DT 022', polisi:'B 9111 XCY', rangka:'MJEFM8JN2RJX27171', mesin:'J08EWDJ41819'},
+  {id:'DT 023', polisi:'B 9110 XCY', rangka:'MJEFM8JN2RJX27172', mesin:'J08EWDJ41820'},
+  {id:'DT 024', polisi:'B 9114 XCY', rangka:'MJEFM8JN2RJX27173', mesin:'J08EWDJ41821'},
+  {id:'DT 025', polisi:'B 9107 XCY', rangka:'MJEFM8JN2RJX27174', mesin:'J08EWDJ41822'},
+  {id:'DT 026', polisi:'B 9072 XCY', rangka:'MJEFM8JN2RJX27178', mesin:'J08EWDJ41826'},
+  {id:'DT 027', polisi:'B 9113 XCY', rangka:'MJEFM8JN2RJX27179', mesin:'J08EWDJ41827'},
+  {id:'DT 028', polisi:'B 9109 XCY', rangka:'MJEFM8JN2RJX27180', mesin:'J08EWDJ41828'},
+  {id:'DT 029', polisi:'B 9106 XCY', rangka:'MJEFM8JN2RJX27181', mesin:'J08EWDJ41835'},
+  {id:'DT 030', polisi:'B 9108 XCY', rangka:'MJEFM8JN2RJX27183', mesin:'J08EWDJ41837'},
+  {id:'DT 031', polisi:'B 9115 XCY', rangka:'MJEFM8JN2RJX27760', mesin:'J08EWDJ43028'},
+  {id:'DT 032', polisi:'B 9116 XCY', rangka:'MJEFM8JN2RJX27761', mesin:'J08EWDJ43030'},
+  {id:'DT 033', polisi:'B 9117 XCY', rangka:'MJEFM8JN2RJX27762', mesin:'J08EWDJ43032'},
+  {id:'DT 034', polisi:'B 9118 XCY', rangka:'MJEFM8JN2RJX27763', mesin:'J08EWDJ43033'},
+  {id:'DT 035', polisi:'B 9119 XCY', rangka:'MJEFM8JN2RJX27764', mesin:'J08EWDJ43034'},
+  {id:'DT 036', polisi:'B 9120 XCY', rangka:'MJEFM8JN2RJX27765', mesin:'J08EWDJ43035'},
+  {id:'DT 037', polisi:'B 9121 XCY', rangka:'MJEFM8JN2RJX27766', mesin:'J08EWDJ43036'},
+  {id:'DT 038', polisi:'B 9122 XCY', rangka:'MJEFM8JN2RJX27767', mesin:'J08EWDJ43038'},
+  {id:'DT 039', polisi:'B 9123 XCY', rangka:'MJEFM8JN2RJX27768', mesin:'J08EWDJ43039'},
+  {id:'DT 040', polisi:'B 9124 XCY', rangka:'MJEFM8JN2RJX27769', mesin:'J08EWDJ43040'},
+  {id:'DT 041', polisi:'B 9132 XCY', rangka:'MJEFM8JN2RJX27770', mesin:'J08EWDJ43041'},
+  {id:'DT 042', polisi:'B 9126 XCY', rangka:'MJEFM8JN2RJX27771', mesin:'J08EWDJ43042'},
+  {id:'DT 043', polisi:'B 9127 XCY', rangka:'MJEFM8JN2RJX27772', mesin:'J08EWDJ43043'},
+  {id:'DT 044', polisi:'B 9128 XCY', rangka:'MJEFM8JN2RJX27773', mesin:'J08EWDJ43044'},
+  {id:'DT 045', polisi:'B 9129 XCY', rangka:'MJEFM8JN2RJX27774', mesin:'J08EWDJ43045'},
+  {id:'DT 046', polisi:'B 9112 XCY', rangka:'MJEFM8JN2RJX27175', mesin:'J08EWDJ41823'},
+  {id:'DT 047', polisi:'B 9125 XCY', rangka:'MJEFM8JN2RJX27176', mesin:'J08EWDJ41824'},
+  {id:'DT 048', polisi:'B 9133 XCY', rangka:'MJEFM8JN2RJX27177', mesin:'J08EWDJ41825'},
+  {id:'DT 049', polisi:'B 9134 XCY', rangka:'MJEFM8JN2RJX27182', mesin:'J08EWDJ41836'},
+];
+
+// ============================
+// STATE
+// ============================
+let currentUser = null;
+let unitStatuses = {}; // { 'DT 001': { status, note, updatedBy, updatedAt } }
+let currentUnit = null;
+let selectedStatus = null;
+let currentFilter = 'all';
+let history = [];
+let gasUrl = '';
+
+const STATUS_LABEL = { ok: 'Operasional', standby: 'Standby', repair: 'Perbaikan', heavy: 'Rusak Berat' };
+
+// ============================
+// INIT
+// ============================
+window.onload = () => {
+  const saved = sessionStorage.getItem('xda_user');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    launchApp();
+  }
+  gasUrl = sessionStorage.getItem('xda_gas_url') || '';
+  if (document.getElementById('gas-url')) document.getElementById('gas-url').value = gasUrl;
+
+  const savedStatuses = sessionStorage.getItem('xda_statuses');
+  if (savedStatuses) unitStatuses = JSON.parse(savedStatuses);
+
+  const savedHistory = sessionStorage.getItem('xda_history');
+  if (savedHistory) history = JSON.parse(savedHistory);
+};
+
+function startApp() {
+  const name = document.getElementById('input-name').value.trim();
+  const role = document.getElementById('input-role').value;
+  if (!name) { showToast('⚠️ Masukkan nama terlebih dahulu'); return; }
+  currentUser = { name, role };
+  sessionStorage.setItem('xda_user', JSON.stringify(currentUser));
+  launchApp();
+}
+
+function launchApp() {
+  document.getElementById('config-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('header-user').textContent = `${currentUser.role} · ${currentUser.name}`;
+  renderUnits();
+  updateSummary();
+}
+
+function logout() {
+  sessionStorage.removeItem('xda_user');
+  currentUser = null;
+  document.getElementById('config-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('input-name').value = '';
+}
+
+// ============================
+// VIEW MANAGEMENT
+// ============================
+function showView(view) {
+  document.getElementById('dashboard-view').style.display = view === 'dashboard' ? 'block' : 'none';
+  document.getElementById('history-view').style.display = view === 'history' ? 'block' : 'none';
+  document.getElementById('settings-view').style.display = view === 'settings' ? 'block' : 'none';
+
+  document.getElementById('nav-dashboard').classList.toggle('active', view === 'dashboard');
+  document.getElementById('nav-history').classList.toggle('active', view === 'history');
+  document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
+
+  if (view === 'history') renderHistory();
+  if (view === 'settings') document.getElementById('gas-url').value = gasUrl;
+}
+
+// ============================
+// UNIT RENDERING
+// ============================
+function filterUnits(filter, el) {
+  currentFilter = filter;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderUnits();
+}
+
+function renderUnits() {
+  const list = document.getElementById('unit-list');
+  let filtered = UNITS.filter(u => {
+    const s = unitStatuses[u.id];
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'pending') return !s;
+    return s && s.status === currentFilter;
+  });
+
+  document.getElementById('unit-count-label').textContent = `${filtered.length} unit`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="no-results">Tidak ada unit dengan filter ini</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(u => {
+    const s = unitStatuses[u.id];
+    const statusClass = s ? `status-${s.status}` : 'status-pending';
+    const statusLabel = s ? STATUS_LABEL[s.status] : 'Belum Dicek';
+    const note = s && s.note ? `<div class="unit-note">${s.note}</div>` : '';
+    const updated = s ? `<div class="unit-updated">oleh ${s.updatedBy} · ${s.updatedAt}</div>` : '';
+    return `
+      <div class="unit-card" onclick="openSheet('${u.id}')">
+        <div class="unit-badge">${u.id}</div>
+        <div class="unit-info">
+          <div style="font-weight:600;font-size:14px;">${u.id}</div>
+          <div class="unit-polisi">${u.polisi}</div>
+          ${note}
+          ${updated}
+        </div>
+        <div class="unit-status ${statusClass}">${statusLabel}</div>
+      </div>`;
+  }).join('');
+}
+
+function updateSummary() {
+  const counts = { ok: 0, standby: 0, repair: 0, heavy: 0 };
+  Object.values(unitStatuses).forEach(s => { if (s && counts[s.status] !== undefined) counts[s.status]++; });
+  document.getElementById('count-ok').textContent = counts.ok;
+  document.getElementById('count-standby').textContent = counts.standby;
+  document.getElementById('count-repair').textContent = counts.repair;
+  document.getElementById('count-heavy').textContent = counts.heavy;
+
+  const checked = Object.keys(unitStatuses).length;
+  const pct = Math.round((checked / 49) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${checked} / 49 unit`;
+}
+
+// ============================
+// BOTTOM SHEET
+// ============================
+function openSheet(unitId) {
+  const unit = UNITS.find(u => u.id === unitId);
+  currentUnit = unit;
+  selectedStatus = null;
+
+  document.getElementById('sheet-unit-name').textContent = unit.id;
+  document.getElementById('sheet-polisi').textContent = unit.polisi;
+
+  const existing = unitStatuses[unitId];
+  document.getElementById('sheet-note').value = existing ? (existing.note || '') : '';
+
+  // Reset all selected states
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
+
+  if (existing) {
+    selectedStatus = existing.status;
+    const btn = document.querySelector(`.status-btn.${existing.status}`);
+    if (btn) btn.classList.add('selected');
+    document.getElementById('btn-save-unit').disabled = false;
+  } else {
+    document.getElementById('btn-save-unit').disabled = true;
+  }
+
+  document.getElementById('overlay').classList.add('active');
+}
+
+function closeSheet(e) {
+  if (e.target === document.getElementById('overlay')) {
+    document.getElementById('overlay').classList.remove('active');
+    currentUnit = null;
+    selectedStatus = null;
+  }
+}
+
+function selectStatus(status, el) {
+  selectedStatus = status;
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('btn-save-unit').disabled = false;
+}
+
+function saveUnitStatus() {
+  if (!currentUnit || !selectedStatus) return;
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const note = document.getElementById('sheet-note').value.trim();
+
+  unitStatuses[currentUnit.id] = {
+    status: selectedStatus,
+    note,
+    updatedBy: currentUser.name,
+    updatedAt: timeStr
+  };
+
+  history.unshift({
+    unitId: currentUnit.id,
+    polisi: currentUnit.polisi,
+    status: selectedStatus,
+    note,
+    updatedBy: currentUser.name,
+    time: timeStr
+  });
+
+  sessionStorage.setItem('xda_statuses', JSON.stringify(unitStatuses));
+  sessionStorage.setItem('xda_history', JSON.stringify(history));
+
+  document.getElementById('overlay').classList.remove('active');
+  updateSummary();
+  renderUnits();
+
+  // Update sync status
+  document.getElementById('sync-dot').className = 'sync-dot';
+  document.getElementById('sync-status').textContent = 'Ada perubahan belum di-sync';
+
+  showToast(`✅ ${currentUnit.id} → ${STATUS_LABEL[selectedStatus]}`);
+  currentUnit = null;
+  selectedStatus = null;
+}
+
+// ============================
+// HISTORY
+// ============================
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (history.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Belum ada riwayat input hari ini</div></div>`;
+    return;
+  }
+  list.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div>
+        <div class="history-unit">${h.unitId}</div>
+        <div class="history-meta">${h.polisi}</div>
+        <div style="margin-top:6px;"><span class="unit-status status-${h.status}" style="font-size:11px;padding:3px 8px;">${STATUS_LABEL[h.status]}</span></div>
+        ${h.note ? `<div class="history-meta" style="margin-top:4px;font-style:italic;">"${h.note}"</div>` : ''}
+        <div class="history-meta">oleh ${h.updatedBy}</div>
+      </div>
+      <div class="history-time">${h.time}</div>
+    </div>`).join('');
+}
+
+// ============================
+// SYNC TO GOOGLE SHEETS
+// ============================
+async function syncToSheets() {
+  if (!gasUrl) {
+    showToast('⚠️ URL Google Apps Script belum diatur. Buka Pengaturan.');
+    return;
+  }
+
+  const dot = document.getElementById('sync-dot');
+  const statusEl = document.getElementById('sync-status');
+  dot.className = 'sync-dot syncing';
+  statusEl.textContent = 'Sedang sync...';
+
+  const payload = {
+    timestamp: new Date().toISOString(),
+    mecName: currentUser.name,
+    mecRole: currentUser.role,
+    statuses: UNITS.map(u => ({
+      unitId: u.id,
+      polisi: u.polisi,
+      status: unitStatuses[u.id] ? STATUS_LABEL[unitStatuses[u.id].status] : 'Belum Dicek',
+      note: unitStatuses[u.id] ? (unitStatuses[u.id].note || '') : '',
+      updatedBy: unitStatuses[u.id] ? unitStatuses[u.id].updatedBy : '',
+      updatedAt: unitStatuses[u.id] ? unitStatuses[u.id].updatedAt : '',
+    }))
+  };
+
+  try {
+    await fetch(gasUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    dot.className = 'sync-dot synced';
+    const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    statusEl.textContent = `Tersinkron · ${now}`;
+    showToast('✅ Data berhasil dikirim ke Google Sheets');
+  } catch (err) {
+    dot.className = 'sync-dot';
+    statusEl.textContent = 'Sync gagal';
+    showToast('❌ Gagal sync. Cek koneksi internet.');
+  }
+}
+
+// ============================
+// SETTINGS
+// ============================
+function saveSettings() {
+  gasUrl = document.getElementById('gas-url').value.trim();
+  sessionStorage.setItem('xda_gas_url', gasUrl);
+  showToast('✅ Pengaturan disimpan');
+}
+
+function resetData() {
+  if (!confirm('Reset semua data status hari ini?')) return;
+  unitStatuses = {};
+  history = [];
+  sessionStorage.removeItem('xda_statuses');
+  sessionStorage.removeItem('xda_history');
+  updateSummary();
+  renderUnits();
+  document.getElementById('sync-dot').className = 'sync-dot';
+  document.getElementById('sync-status').textContent = 'Belum tersinkron';
+  showToast('🔄 Data lokal direset');
+}
+
+// ============================
+// TOAST
+// ============================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
