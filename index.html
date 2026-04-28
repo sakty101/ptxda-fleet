@@ -596,6 +596,59 @@
   .loading-text { font-size: 14px; color: var(--text-muted); }
 
   .no-results { text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px; }
+
+  /* SEARCH BOX */
+  .search-wrap {
+    padding: 0 16px 12px;
+    position: relative;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-size: 15px;
+    padding: 13px 16px 13px 44px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  .search-icon {
+    position: absolute;
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 17px;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .search-clear {
+    position: absolute;
+    right: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--surface2);
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .search-clear.visible { display: flex; }
 </style>
 </head>
 <body>
@@ -677,6 +730,12 @@
     <div class="section-header">
       <span class="section-title">Daftar Unit</span>
       <span class="unit-count" id="unit-count-label">49 unit</span>
+    </div>
+
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="search-input" placeholder="Cari unit... (contoh: DT 015, B 9440)" oninput="onSearch(this.value)">
+      <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
     </div>
 
     <div class="filter-tabs">
@@ -837,6 +896,7 @@ let unitStatuses = {}; // { 'DT 001': { status, note, updatedBy, updatedAt } }
 let currentUnit = null;
 let selectedStatus = null;
 let currentFilter = 'all';
+let searchQuery = '';
 let history = [];
 let gasUrl = 'https://script.google.com/macros/s/AKfycbz8pt2SSEl5F8BtK6P4EEE2CuszC44006TnCktubJbHECZcNY172uxKWIb-msHZ26jeGw/exec';
 
@@ -943,13 +1003,37 @@ function filterUnits(filter, el) {
   renderUnits();
 }
 
+function onSearch(val) {
+  searchQuery = val.trim().toLowerCase();
+  const clearBtn = document.getElementById('search-clear');
+  if (clearBtn) clearBtn.classList.toggle('visible', searchQuery.length > 0);
+  renderUnits();
+}
+
+function clearSearch() {
+  searchQuery = '';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-clear').classList.remove('visible');
+  renderUnits();
+}
+
 function renderUnits() {
   const list = document.getElementById('unit-list');
   let filtered = UNITS.filter(u => {
     const s = unitStatuses[u.id];
-    if (currentFilter === 'all') return true;
-    if (currentFilter === 'pending') return !s;
-    return s && s.status === currentFilter;
+    // Filter by tab
+    const tabMatch = (() => {
+      if (currentFilter === 'all') return true;
+      if (currentFilter === 'pending') return !s;
+      return s && s.status === currentFilter;
+    })();
+    // Filter by search
+    const searchMatch = !searchQuery ||
+      u.id.toLowerCase().includes(searchQuery) ||
+      u.polisi.toLowerCase().includes(searchQuery) ||
+      u.rangka.toLowerCase().includes(searchQuery) ||
+      u.mesin.toLowerCase().includes(searchQuery);
+    return tabMatch && searchMatch;
   });
 
   document.getElementById('unit-count-label').textContent = `${filtered.length} unit`;
