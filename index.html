@@ -638,9 +638,9 @@
     <div class="sync-bar">
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="sync-dot" id="sync-dot"></div>
-        <span id="sync-status">Belum tersinkron</span>
+        <span id="sync-status">Auto-sync aktif · menunggu data...</span>
       </div>
-      <button class="btn-sync" onclick="syncToSheets()">↑ Sync ke Sheets</button>
+      <button class="btn-sync" onclick="syncToSheets(false)">↑ Sync Sekarang</button>
     </div>
 
     <div class="summary-grid">
@@ -869,12 +869,44 @@ function startApp() {
   launchApp();
 }
 
+let autoSyncInterval = null;
+
 function launchApp() {
   document.getElementById('config-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('header-user').textContent = `${currentUser.role} · ${currentUser.name}`;
   renderUnits();
   updateSummary();
+  startAutoSync();
+}
+
+function startAutoSync() {
+  if (autoSyncInterval) clearInterval(autoSyncInterval);
+  autoSyncInterval = setInterval(() => {
+    if (Object.keys(unitStatuses).length > 0) {
+      syncToSheets(true);
+    }
+  }, 60000);
+  updateCountdown();
+}
+
+let countdownVal = 60;
+function updateCountdown() {
+  countdownVal = 60;
+  const statusEl = document.getElementById('sync-status');
+  if (window._countdownTimer) clearInterval(window._countdownTimer);
+  window._countdownTimer = setInterval(() => {
+    const dot = document.getElementById('sync-dot');
+    if (dot && dot.classList.contains('syncing')) return;
+    countdownVal--;
+    if (countdownVal <= 0) countdownVal = 60;
+    const synced = dot && dot.classList.contains('synced');
+    if (synced) {
+      statusEl.textContent = `Auto-sync dalam ${countdownVal}d`;
+    } else if (Object.keys(unitStatuses).length > 0) {
+      statusEl.textContent = `Auto-sync dalam ${countdownVal}d`;
+    }
+  }, 1000);
 }
 
 function logout() {
@@ -1069,9 +1101,9 @@ function renderHistory() {
 // ============================
 // SYNC TO GOOGLE SHEETS
 // ============================
-async function syncToSheets() {
+async function syncToSheets(silent = false) {
   if (!gasUrl) {
-    showToast('⚠️ URL Google Apps Script belum diatur. Buka Pengaturan.');
+    if (!silent) showToast('⚠️ URL Google Apps Script belum diatur. Buka Pengaturan.');
     return;
   }
 
@@ -1105,11 +1137,12 @@ async function syncToSheets() {
     dot.className = 'sync-dot synced';
     const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     statusEl.textContent = `Tersinkron · ${now}`;
-    showToast('✅ Data berhasil dikirim ke Google Sheets');
+    countdownVal = 60;
+    if (!silent) showToast('✅ Data berhasil dikirim ke Google Sheets');
   } catch (err) {
     dot.className = 'sync-dot';
-    statusEl.textContent = 'Sync gagal';
-    showToast('❌ Gagal sync. Cek koneksi internet.');
+    statusEl.textContent = 'Sync gagal — cek koneksi';
+    if (!silent) showToast('❌ Gagal sync. Cek koneksi internet.');
   }
 }
 
