@@ -838,7 +838,7 @@ let currentUnit = null;
 let selectedStatus = null;
 let currentFilter = 'all';
 let history = [];
-let gasUrl = '';
+let gasUrl = 'https://script.google.com/macros/s/AKfycbz8pt2SSEl5F8BtK6P4EEE2CuszC44006TnCktubJbHECZcNY172uxKWIb-msHZ26jeGw/exec';
 
 const STATUS_LABEL = { ok: 'Operasional', standby: 'Standby', repair: 'Perbaikan', heavy: 'Rusak Berat' };
 
@@ -851,7 +851,6 @@ window.onload = () => {
     currentUser = JSON.parse(saved);
     launchApp();
   }
-  gasUrl = sessionStorage.getItem('xda_gas_url') || '';
   if (document.getElementById('gas-url')) document.getElementById('gas-url').value = gasUrl;
 
   const savedStatuses = sessionStorage.getItem('xda_statuses');
@@ -1118,8 +1117,7 @@ async function syncToSheets() {
 // SETTINGS
 // ============================
 function saveSettings() {
-  gasUrl = document.getElementById('gas-url').value.trim();
-  sessionStorage.setItem('xda_gas_url', gasUrl);
+  // URL sudah hardcoded, tidak perlu disimpan ulang
   showToast('✅ Pengaturan disimpan');
 }
 
